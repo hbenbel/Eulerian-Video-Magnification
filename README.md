@@ -1,10 +1,3 @@
-███████ ██    ██ ███    ███ 
-██      ██    ██ ████  ████ 
-█████   ██    ██ ██ ████ ██ 
-██       ██  ██  ██  ██  ██ 
-███████   ████   ██      ██ 
-
-
 DESCRIPTION
     Eulerian Video Magnification to detect heartbeats
 
