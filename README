@@ -10,7 +10,7 @@ DESCRIPTION
     Eulerian Video Magnification to detect heartbeats
 
 USAGE
-    python src/evm.py --videopath VIDEOPATH
+    python src/evm.py --videopath VIDEOPATH --level GAUSSIAN_PYRAMID_DEPTH
 
 REFERENCES
     Eulerian Video Magnification for Revealing Subtle Changes in the World (https://people.csail.mit.edu/mrub/evm/)

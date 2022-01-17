@@ -38,7 +38,28 @@ def yiq2rgb(yiq_image):
     return ((yiq_image @ conversion_matrix.T) * 255).astype(np.uint8)
 
 
-def main(videoPath):
+def pyrDown(image, kernel):
+    downsized_image = cv2.filter2D(image, -1, kernel)
+    return downsized_image[::2, ::2]
+
+
+def pyrUp(image, kernel):
+    upsampled_image = image.repeat(2, axis=0).repeat(2, axis=1)
+    return cv2.filter2D(upsampled_image, -1, kernel)
+
+
+def gaussianPyramid(image, kernel, level):
+    gaussian_pyramid = []
+    downsampled_image = image
+
+    for _ in range(level):
+        gaussian_pyramid.append(downsampled_image)
+        downsampled_image = pyrDown(downsampled_image, kernel)
+
+    return gaussian_pyramid
+
+
+def main(videoPath, kernel, level):
     image_sequence = load_video(videoPath)
     image_sequence = list(map(lambda x: rgb2yiq(x), image_sequence))
 
@@ -63,7 +84,22 @@ if __name__ == "__main__":
         required=True
     )
 
+    parser.add_argument(
+        '--level',
+        '-l',
+        type=int,
+        help='Number of level of the Gaussian Pyramid',
+        required=False,
+        default=3
+    )
+
     args = parser.parse_args()
     videopath = args.videopath
+    level = args.level
+    kernel = np.array([[1,  4,  6,  4, 1],
+                       [4, 16, 24, 16, 4],
+                       [6, 24, 36, 24, 6],
+                       [4, 16, 24, 16, 4],
+                       [1,  4,  6,  4, 1]]) / 256
 
-    main(videopath)
+    main(videopath, kernel, level)
