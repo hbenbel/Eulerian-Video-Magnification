@@ -44,26 +44,33 @@ def pyrDown(image, kernel):
 
 
 def pyrUp(image, kernel):
-    upsampled_image = image.repeat(2, axis=0).repeat(2, axis=1)
-    return cv2.filter2D(upsampled_image, -1, kernel)
+    upsampled_image = np.insert(arr=image,
+                                obj=np.arange(1, image.shape[0] + 1),
+                                values=0,
+                                axis=0)
+    upsampled_image = np.insert(arr=upsampled_image,
+                                obj=np.arange(1, upsampled_image.shape[1] + 1),
+                                values=0,
+                                axis=1)
+    return cv2.filter2D(upsampled_image, -1, 4 * kernel)
 
 
-def gaussianPyramid(image, kernel, level):
-    gaussian_pyramid = []
-    downsampled_image = image
+def lagrangianPyramid(image, kernel, level):
+    lagrangian_pyramid = []
 
     for _ in range(level):
-        gaussian_pyramid.append(downsampled_image)
-        downsampled_image = pyrDown(downsampled_image, kernel)
+        downsampled_image = pyrDown(image, kernel)
+        upsampled_image = pyrUp(downsampled_image, kernel)
+        lagrangian_pyramid.append(image - upsampled_image)
+        image = downsampled_image
 
-    return gaussian_pyramid
+    return lagrangian_pyramid
 
 
 def main(videoPath, kernel, level):
     image_sequence = load_video(videoPath)
     image_sequence = list(map(lambda x: rgb2yiq(x), image_sequence))
 
-    #4. Generate a pyramid (pyrdown)
     #5. Apply Temporal filter (with fft)
     #6. Amplify video
     #7. Reconstruct video (pyrup)
@@ -88,7 +95,7 @@ if __name__ == "__main__":
         '--level',
         '-l',
         type=int,
-        help='Number of level of the Gaussian Pyramid',
+        help='Number of level of the Lagrangian Pyramid',
         required=False,
         default=3
     )
