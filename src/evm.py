@@ -32,6 +32,7 @@ def rgb2yiq(rgb_image):
             ]
         )
     )
+
     return (rgb_image @ conversion_matrix.T) / 255.0
 
 
@@ -45,19 +46,21 @@ def yiq2rgb(yiq_image):
             ]
         )
     )
+
     return ((yiq_image @ conversion_matrix.T) * 255).astype(np.uint8)
 
 
 def pyrDown(image, kernel):
-    downsized_image = cv2.filter2D(image, -1, kernel)
-    return downsized_image[::2, ::2]
+    return cv2.filter2D(image, -1, kernel)[::2, ::2]
 
 
 def pyrUp(image, kernel):
-    upsampled_image = np.insert(image, np.arange(1, image.shape[0] + 1), 0, axis=0)
-    upsampled_image = np.insert(
-        upsampled_image, np.arange(1, upsampled_image.shape[1] + 1), 0, axis=1
-    )
+    height_index = np.arange(1, image.shape[0] + 1)
+    width_index = np.arange(1, image.shape[1] + 1)
+
+    upsampled_image = np.insert(image, height_index, 0, axis=0)
+    upsampled_image = np.insert(upsampled_image, width_index, 0, axis=1)
+
     return cv2.filter2D(upsampled_image, -1, 4 * kernel)
 
 
@@ -75,16 +78,18 @@ def laplacianPyramid(image, kernel, level):
 
 def main(videoPath, kernel, level):
     image_sequence = load_video(videoPath)
-    laplacian_pyramid_sequence = list(
-        map(lambda x: laplacianPyramid(x, kernel, level), image_sequence)
-    )
+    return image_sequence
+
+"""
+    laplacian_pyramid_sequence = list(map(lambda x: laplacianPyramid(x, kernel, level), image_sequence))
     image_sequence = list(map(lambda x: rgb2yiq(x), image_sequence))
 
-    # 5. Apply Temporal filter (with fft)
-    # 6. Amplify video
-    # 7. Reconstruct video (pyrup)
-    # 8. Convert to rgb
-    # 9. Save video
+    5. Apply Temporal filter (with fft)
+    6. Amplify video
+    7. Reconstruct video (pyrup)
+    8. Convert to rgb
+    9. Save video
+"""
 
 
 if __name__ == "__main__":
@@ -119,7 +124,7 @@ if __name__ == "__main__":
                 [4, 16, 24, 16, 4],
                 [6, 24, 36, 24, 6],
                 [4, 16, 24, 16, 4],
-                [1,  4,  6, 4,  1],
+                [1,  4,  6,  4,  1],
             ]
         )
         / 256
