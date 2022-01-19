@@ -55,11 +55,11 @@ def pyrDown(image, kernel):
 
 
 def pyrUp(image, kernel):
-    height_index = np.arange(1, image.shape[0] + 1)
-    width_index = np.arange(1, image.shape[1] + 1)
+    height_indexes = np.arange(1, image.shape[0] + 1)
+    width_indexes = np.arange(1, image.shape[1] + 1)
 
-    upsampled_image = np.insert(image, height_index, 0, axis=0)
-    upsampled_image = np.insert(upsampled_image, width_index, 0, axis=1)
+    upsampled_image = np.insert(image, height_indexes, 0, axis=0)
+    upsampled_image = np.insert(upsampled_image, width_indexes, 0, axis=1)
 
     return cv2.filter2D(upsampled_image, -1, 4 * kernel)
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
                 [4, 16, 24, 16, 4],
                 [6, 24, 36, 24, 6],
                 [4, 16, 24, 16, 4],
-                [1,  4,  6,  4,  1],
+                [1,  4,  6,  4, 1],
             ]
         )
         / 256
