@@ -1,95 +1,82 @@
 import argparse
 
-import cv2
 import numpy as np
+import tqdm
+
+from constants import gaussian_kernel
+from processing import (generatePyramid, idealTemporalBandpassFilter,
+                        loadVideo, reconstructImage, rgb2yiq, saveVideo)
 
 
-def load_video(videoPath):
-    image_sequence = []
-    cap = cv2.VideoCapture(videoPath)
+def getPyramids(images, kernel, level):
+    pyramids = []
 
-    while cap.isOpened():
-        ret, frame = cap.read()
+    for image in tqdm.tqdm(images, ascii=True, desc="Pyramids Generation"):
+        pyramid = generatePyramid(rgb2yiq(image), kernel, level)
+        pyramids.append(pyramid)
 
-        if ret is False:
-            break
+    gaussian_pyramids = list(map(lambda x: x[0], pyramids))
+    gaussian_pyramids = np.asarray(gaussian_pyramids, dtype='object')
 
-        frame = frame[:, :, ::-1]
-        image_sequence.append(frame)
+    laplacian_pyramids = list(map(lambda x: x[1], pyramids))
+    laplacian_pyramids = np.asarray(laplacian_pyramids, dtype='object')
 
-    cap.release()
-
-    return np.asarray(image_sequence)
+    return gaussian_pyramids, laplacian_pyramids
 
 
-def rgb2yiq(rgb_image):
-    conversion_matrix = (
-        np.array(
-            [
-                [0.299,  0.587,  0.114],
-                [0.596, -0.274, -0.322],
-                [0.211, -0.523,  0.312]
-            ]
-        )
-    )
+def augmentPyramids(pyramids, level, fps, freq_range, amplification):
+    sequences = []
 
-    return (rgb_image @ conversion_matrix.T) / 255.0
+    for pyramid_level in tqdm.tqdm(
+                            range(level),
+                            ascii=True,
+                            desc="Pyramids Augmentation"):
 
+        images = np.stack(pyramids[:, pyramid_level]).astype(np.float32)
 
-def yiq2rgb(yiq_image):
-    conversion_matrix = (
-        np.array(
-            [
-                [1,  0.956,  0.621],
-                [1, -0.272, -0.647],
-                [1, -1.106,  1.703]
-            ]
-        )
-    )
+        filtered_images = idealTemporalBandpassFilter(
+                            images=images,
+                            fps=fps,
+                            freq_range=freq_range,
+                            amplification=amplification
+                        ).astype(np.float32)
 
-    return ((yiq_image @ conversion_matrix.T) * 255).astype(np.uint8)
+        sequences.append(images + filtered_images)
+
+    return sequences
 
 
-def pyrDown(image, kernel):
-    return cv2.filter2D(image, -1, kernel)[::2, ::2]
+def getOutputVideo(filtered_images, kernel):
+    video = []
+
+    for i in tqdm.tqdm(
+                range(filtered_images[0].shape[0]),
+                ascii=True,
+                desc="Video Reconstruction"):
+
+        image_all_level = list(map(lambda x: x[i], filtered_images))
+        reconstructed_image = reconstructImage(image_all_level, kernel)
+
+        video.append(reconstructed_image)
+
+    return video
 
 
-def pyrUp(image, kernel):
-    height_indexes = np.arange(1, image.shape[0] + 1)
-    width_indexes = np.arange(1, image.shape[1] + 1)
+def main(video_path, kernel, level, freq_range, amplification, saving_path):
+    images, fps = loadVideo(video_path)
+    gaussian_pyramids, _ = getPyramids(images, kernel, level)
 
-    upsampled_image = np.insert(image, height_indexes, 0, axis=0)
-    upsampled_image = np.insert(upsampled_image, width_indexes, 0, axis=1)
+    filtered_pyramids_level = augmentPyramids(
+                                pyramids=gaussian_pyramids,
+                                level=level,
+                                fps=fps,
+                                freq_range=freq_range,
+                                amplification=amplification
+                            )
 
-    return cv2.filter2D(upsampled_image, -1, 4 * kernel)
+    output_video = getOutputVideo(filtered_pyramids_level, kernel)
 
-
-def laplacianPyramid(image, kernel, level):
-    laplacian_pyramid = []
-
-    for _ in range(level):
-        downsampled_image = pyrDown(image, kernel)
-        upsampled_image = pyrUp(downsampled_image, kernel)
-        laplacian_pyramid.append(image - upsampled_image)
-        image = downsampled_image
-
-    return laplacian_pyramid
-
-
-def main(videoPath, kernel, level):
-    image_sequence = load_video(videoPath)
-    return image_sequence
-
-"""
-    laplacian_pyramid_sequence = list(map(lambda x: laplacianPyramid(x, kernel, level), image_sequence))
-    image_sequence = list(map(lambda x: rgb2yiq(x), image_sequence))
-
-    5. Apply Temporal filter (with fft)
-    6. Amplify video
-    7. Reconstruct video (pyrup)
-    8. Convert to rgb
-    9. Save video
-"""
+    saveVideo(output_video, saving_path, fps)
 
 
 if __name__ == "__main__":
@@ -98,36 +85,69 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--videopath",
+        "--video_path",
         "-v",
         type=str,
         help="Path to the video to be used",
-        required=True,
+        required=True
     )
 
     parser.add_argument(
         "--level",
         "-l",
         type=int,
-        help="Number of level of the Laplacian Pyramid",
+        help="Number of level of the Gaussian/Laplacian Pyramid",
         required=False,
-        default=3,
+        default=3
+    )
+
+    parser.add_argument(
+        "--amplification",
+        "-a",
+        type=int,
+        help="Amplification factor",
+        required=False,
+        default=30
+    )
+
+    parser.add_argument(
+        "--min_frequency",
+        "-minf",
+        type=float,
+        help="Minimum allowed frequency",
+        required=False,
+        default=0.833
+    )
+
+    parser.add_argument(
+        "--max_frequency",
+        "-maxf",
+        type=float,
+        help="Maximum allowed frequency",
+        required=False,
+        default=1
+    )
+
+    parser.add_argument(
+        "--saving_path",
+        "-s",
+        type=str,
+        help="Saving path of the magnified video",
+        required=True
     )
 
     args = parser.parse_args()
-    videopath = args.videopath
+    video_path = args.video_path
     level = args.level
-    kernel = (
-        np.array(
-            [
-                [1,  4,  6,  4, 1],
-                [4, 16, 24, 16, 4],
-                [6, 24, 36, 24, 6],
-                [4, 16, 24, 16, 4],
-                [1,  4,  6,  4, 1],
-            ]
-        )
-        / 256
-    )
+    amplification = args.amplification
+    frequency_range = [args.min_frequency, args.max_frequency]
+    saving_path = args.saving_path
 
-    main(videopath, kernel, level)
+    main(
+        video_path=video_path,
+        kernel=gaussian_kernel,
+        level=level,
+        freq_range=frequency_range,
+        amplification=amplification,
+        saving_path=saving_path
+    )
