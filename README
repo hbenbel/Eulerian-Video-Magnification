@@ -13,6 +13,7 @@ USAGE
     python src/evm.py [-h] --video_path VIDEO_PATH [--level LEVEL]
               [--amplification AMPLIFICATION] [--min_frequency MIN_FREQUENCY]
               [--max_frequency MAX_FREQUENCY] --saving_path SAVING_PATH
+              [--mode {gaussian,laplacian}]
 
 REFERENCES
     Eulerian Video Magnification for Revealing Subtle Changes in the World (https://people.csail.mit.edu/mrub/evm/)

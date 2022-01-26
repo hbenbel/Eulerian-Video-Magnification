@@ -1,49 +1,10 @@
 import argparse
 
-import numpy as np
 import tqdm
 
 from constants import gaussian_kernel
-from processing import (generatePyramid, idealTemporalBandpassFilter,
-                        loadVideo, reconstructImage, rgb2yiq, saveVideo)
-
-
-def getPyramids(images, kernel, level):
-    pyramids = []
-
-    for image in tqdm.tqdm(images, ascii=True, desc="Pyramids Generation"):
-        pyramid = generatePyramid(rgb2yiq(image), kernel, level)
-        pyramids.append(pyramid)
-
-    gaussian_pyramids = list(map(lambda x: x[0], pyramids))
-    gaussian_pyramids = np.asarray(gaussian_pyramids, dtype='object')
-
-    laplacian_pyramids = list(map(lambda x: x[1], pyramids))
-    laplacian_pyramids = np.asarray(laplacian_pyramids, dtype='object')
-
-    return gaussian_pyramids, laplacian_pyramids
-
-
-def augmentPyramids(pyramids, level, fps, freq_range, amplification):
-    sequences = []
-
-    for pyramid_level in tqdm.tqdm(
-                            range(level),
-                            ascii=True,
-                            desc="Pyramids Augmentation"):
-
-        images = np.stack(pyramids[:, pyramid_level]).astype(np.float32)
-
-        filtered_images = idealTemporalBandpassFilter(
-                            images=images,
-                            fps=fps,
-                            freq_range=freq_range,
-                            amplification=amplification
-                        ).astype(np.float32)
-
-        sequences.append(images + filtered_images)
-
-    return sequences
+from processing import loadVideo, reconstructImage, saveVideo
+from pyramids import augmentPyramids, getPyramids
 
 
 def getOutputVideo(filtered_images, kernel):
@@ -62,16 +23,25 @@ def getOutputVideo(filtered_images, kernel):
     return video
 
 
-def main(video_path, kernel, level, freq_range, amplification, saving_path):
+def main(video_path,
+         kernel,
+         level,
+         freq_range,
+         amplification,
+         saving_path,
+         mode):
+
     images, fps = loadVideo(video_path)
-    gaussian_pyramids, _ = getPyramids(images, kernel, level)
+    gaussian_pyramids, laplacian_pyramids = getPyramids(images, kernel, level)
 
     filtered_pyramids_level = augmentPyramids(
-                                pyramids=gaussian_pyramids,
+                                gaussian_pyramids=gaussian_pyramids,
+                                laplacian_pyramids=laplacian_pyramids,
                                 level=level,
                                 fps=fps,
                                 freq_range=freq_range,
-                                amplification=amplification
+                                amplification=amplification,
+                                mode=mode
                             )
 
     output_video = getOutputVideo(filtered_pyramids_level, kernel)
@@ -136,12 +106,23 @@ if __name__ == "__main__":
         required=True
     )
 
+    parser.add_argument(
+        "--mode",
+        "-m",
+        type=str,
+        help="Type of pyramids to use (gaussian or laplacian)",
+        choices=['gaussian', 'laplacian'],
+        required=False,
+        default='gaussian'
+    )
+
     args = parser.parse_args()
     video_path = args.video_path
     level = args.level
     amplification = args.amplification
     frequency_range = [args.min_frequency, args.max_frequency]
     saving_path = args.saving_path
+    mode = args.mode
 
     main(
         video_path=video_path,
@@ -149,5 +130,6 @@ if __name__ == "__main__":
         level=level,
         freq_range=frequency_range,
         amplification=amplification,
-        saving_path=saving_path
+        saving_path=saving_path,
+        mode=mode
     )

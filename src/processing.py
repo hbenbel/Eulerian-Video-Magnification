@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import tqdm
+from scipy.signal import butter, sosfilt
 
 from constants import rgb_from_yiq, yiq_from_rgb
 
@@ -74,10 +75,9 @@ def generatePyramid(image, kernel, level):
 
 
 def idealTemporalBandpassFilter(images,
-                                fps=30,
-                                freq_range=[0.833, 1],
-                                axis=0,
-                                amplification=30):
+                                fps,
+                                freq_range,
+                                axis=0):
 
     fft = np.fft.fft(images, axis=axis)
     frequencies = np.fft.fftfreq(images.shape[0], d=1.0/fps)
@@ -90,9 +90,16 @@ def idealTemporalBandpassFilter(images,
     fft[high:-high] = 0
 
     filtered_images = np.fft.ifft(fft, axis=0).real
-    filtered_images[:, :, :, 1:] *= amplification
 
     return filtered_images
+
+
+def butterBandpassFilter(images, freq_range, fps, order=4):
+    omega = 0.5 * fps
+    lowpass = freq_range[0] / omega
+    highpass = freq_range[1] / omega
+    sos = butter(order, [lowpass, highpass], btype='band', output='sos')
+    return sosfilt(sos, images, axis=0)
 
 
 def normalizeReconstructedImage(image):
@@ -112,7 +119,7 @@ def reconstructImage(pyramid, kernel):
     return normalizeReconstructedImage(reconstructed_image)
 
 
-def saveVideo(video, saving_path, fps=30):
+def saveVideo(video, saving_path, fps):
     (height, width) = video[0].shape[0:2]
 
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
