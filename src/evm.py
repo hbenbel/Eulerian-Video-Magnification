@@ -7,15 +7,14 @@ from processing import (getGaussianOutputVideo, getLaplacianOutputVideo,
                         loadVideo, saveVideo)
 
 
-def gaussian_evm(video_path,
+def gaussian_evm(images,
+                 fps,
                  kernel,
                  level,
                  alpha,
                  freq_range,
-                 saving_path,
                  attenuation):
 
-    images, fps = loadVideo(video_path=video_path)
     gaussian_pyramids = getGaussianPyramids(
                             images=images,
                             kernel=kernel,
@@ -37,19 +36,18 @@ def gaussian_evm(video_path,
                         filtered_images=filtered_pyramids
                 )
 
-    saveVideo(video=output_video, saving_path=saving_path, fps=fps)
+    return output_video
 
 
-def laplacian_evm(video_path,
+def laplacian_evm(images,
+                  fps,
                   kernel,
                   level,
                   alpha,
                   lambda_cutoff,
                   freq_range,
-                  saving_path,
                   attenuation):
 
-    images, fps = loadVideo(video_path)
     laplacian_pyramids = getLaplacianPyramids(
                                 images=images,
                                 kernel=kernel,
@@ -74,7 +72,7 @@ def laplacian_evm(video_path,
                             kernel=kernel
                 )
 
-    saveVideo(video=output_video, saving_path=saving_path, fps=fps)
+    return output_video
 
 
 if __name__ == "__main__":
@@ -164,17 +162,21 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     kwargs = {}
-    kwargs['video_path'] = args.video_path
     kwargs['kernel'] = gaussian_kernel
     kwargs['level'] = args.level
     kwargs['alpha'] = args.alpha
     kwargs['freq_range'] = [args.low_omega, args.high_omega]
-    kwargs['saving_path'] = args.saving_path
     kwargs['attenuation'] = args.attenuation
     mode = args.mode
 
+    images, fps = loadVideo(video_path=args.video_path)
+    kwargs['images'] = images
+    kwargs['fps'] = fps
+
     if mode == 'gaussian':
-        gaussian_evm(**kwargs)
-    elif mode == 'laplacian':
+        output_video = gaussian_evm(**kwargs)
+    else:
         kwargs['lambda_cutoff'] = args.lambda_cutoff
-        laplacian_evm(**kwargs)
+        output_video = laplacian_evm(**kwargs)
+
+    saveVideo(video=output_video, saving_path=args.saving_path, fps=fps)
