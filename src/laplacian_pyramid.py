@@ -9,8 +9,10 @@ def generateLaplacianPyramid(image, kernel, level):
     prev_image = image.copy()
 
     for _ in range(level):
-        downsampled_image = pyrDown(prev_image, kernel)
-        upsampled_image = pyrUp(downsampled_image, kernel, image.shape[:2])
+        downsampled_image = pyrDown(image=prev_image, kernel=kernel)
+        upsampled_image = pyrUp(image=downsampled_image,
+                                kernel=kernel,
+                                dst_shape=prev_image.shape[:2])
         laplacian_pyramid.append(prev_image - upsampled_image)
         prev_image = downsampled_image
 

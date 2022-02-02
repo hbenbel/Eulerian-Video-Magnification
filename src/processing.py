@@ -83,8 +83,7 @@ def butterBandpassFilter(images, freq_range, fps, order=4):
 def reconstructGaussianImage(image, pyramid):
     reconstructed_image = rgb2yiq(image) + pyramid
     reconstructed_image = yiq2rgb(reconstructed_image)
-    reconstructed_image[reconstructed_image > 255] = 255
-    reconstructed_image[reconstructed_image < 0] = 0
+    reconstructed_image = np.clip(reconstructed_image, 0, 255)
 
     return reconstructed_image.astype(np.uint8)
 
@@ -93,14 +92,13 @@ def reconstructLaplacianImage(image, pyramid, kernel):
     reconstructed_image = rgb2yiq(image)
 
     for level in range(1, len(pyramid)):
-        tmp = yiq2rgb(pyramid[level])
+        tmp = pyramid[level]
         for curr_level in range(level):
             tmp = pyrUp(tmp, kernel, pyramid[level - curr_level - 1].shape[:2])
         reconstructed_image += tmp.astype(np.float32)
 
     reconstructed_image = yiq2rgb(reconstructed_image)
-    reconstructed_image[reconstructed_image > 255] = 255
-    reconstructed_image[reconstructed_image < 0] = 0
+    reconstructed_image = np.clip(reconstructed_image, 0, 255)
 
     return reconstructed_image.astype(np.uint8)
 
@@ -116,7 +114,6 @@ def getGaussianOutputVideo(original_images, filtered_images):
                                 original_images[i],
                                 filtered_images[i]
                             )
-
         video.append(reconstructed_image)
 
     return np.asarray(video)
@@ -137,7 +134,7 @@ def getLaplacianOutputVideo(original_images, filtered_images, kernel):
                             )
         video.append(reconstructed_image)
 
-    return video
+    return np.asarray(video)
 
 
 def saveVideo(video, saving_path, fps):

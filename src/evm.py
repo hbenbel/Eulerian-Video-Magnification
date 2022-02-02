@@ -63,13 +63,15 @@ def laplacian_evm(video_path,
                             freq_range=freq_range,
                             alpha=alpha,
                             attenuation=attenuation,
-                            lambda_cutoff=lambda_cutoff
+                            lambda_cutoff=lambda_cutoff,
+                            level=level
                     )
     print("Finished!")
 
     output_video = getLaplacianOutputVideo(
                             original_images=images,
-                            filtered_images=filtered_pyramids
+                            filtered_images=filtered_pyramids,
+                            kernel=kernel
                 )
 
     saveVideo(video=output_video, saving_path=saving_path, fps=fps)
@@ -166,7 +168,7 @@ if __name__ == "__main__":
     kwargs['kernel'] = gaussian_kernel
     kwargs['level'] = args.level
     kwargs['alpha'] = args.alpha
-    kwargs['frequency_range'] = [args.low_omega, args.high_omega]
+    kwargs['freq_range'] = [args.low_omega, args.high_omega]
     kwargs['saving_path'] = args.saving_path
     kwargs['attenuation'] = args.attenuation
     mode = args.mode

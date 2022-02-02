@@ -9,7 +9,7 @@ def generateGaussianPyramid(image, kernel, level):
     downsampled_image = image.copy()
 
     for _ in range(level):
-        downsampled_image = pyrDown(downsampled_image, kernel)
+        downsampled_image = pyrDown(image=downsampled_image, kernel=kernel)
         image_shape.append(downsampled_image.shape[:2])
 
     gaussian_pyramid = downsampled_image
