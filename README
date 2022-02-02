@@ -7,13 +7,13 @@
 
 
 DESCRIPTION
-    Eulerian Video Magnification to detect heartbeats
+    Eulerian Video Magnification for colors and motions magnification
 
 USAGE
-    python src/evm.py [-h] --video_path VIDEO_PATH [--level LEVEL]
-              [--amplification AMPLIFICATION] [--min_frequency MIN_FREQUENCY]
-              [--max_frequency MAX_FREQUENCY] --saving_path SAVING_PATH
-              [--mode {gaussian,laplacian}]
+    python src/evm.py [-h] --video_path VIDEO_PATH [--level LEVEL] [--alpha ALPHA]
+              [--lambda_cutoff LAMBDA_CUTOFF] [--low_omega LOW_OMEGA]
+              [--high_omega HIGH_OMEGA] --saving_path SAVING_PATH
+              [--mode {gaussian,laplacian}] [--attenuation ATTENUATION]
 
 REFERENCES
     Eulerian Video Magnification for Revealing Subtle Changes in the World (https://people.csail.mit.edu/mrub/evm/)

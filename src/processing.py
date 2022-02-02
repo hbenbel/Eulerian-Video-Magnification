@@ -6,9 +6,9 @@ from scipy.signal import butter, sosfilt
 from constants import rgb_from_yiq, yiq_from_rgb
 
 
-def loadVideo(videoPath):
+def loadVideo(video_path):
     image_sequence = []
-    video = cv2.VideoCapture(videoPath)
+    video = cv2.VideoCapture(video_path)
     fps = video.get(cv2.CAP_PROP_FPS)
 
     while video.isOpened():
@@ -38,13 +38,13 @@ def pyrDown(image, kernel):
     return cv2.filter2D(image, -1, kernel)[::2, ::2]
 
 
-def pyrUp(image, kernel, dst_source=None):
+def pyrUp(image, kernel, dst_shape=None):
     dst_height = image.shape[0] + 1
     dst_width = image.shape[1] + 1
 
-    if dst_source is not None:
-        dst_height -= (dst_source[0] % image.shape[0] != 0)
-        dst_width -= (dst_source[1] % image.shape[1] != 0)
+    if dst_shape is not None:
+        dst_height -= (dst_shape[0] % image.shape[0] != 0)
+        dst_width -= (dst_shape[1] % image.shape[1] != 0)
 
     height_indexes = np.arange(1, dst_height)
     width_indexes = np.arange(1, dst_width)
@@ -53,25 +53,6 @@ def pyrUp(image, kernel, dst_source=None):
     upsampled_image = np.insert(upsampled_image, width_indexes, 0, axis=1)
 
     return cv2.filter2D(upsampled_image, -1, 4 * kernel)
-
-
-def generatePyramid(image, kernel, level):
-    gaussian_pyramid = []
-    laplacian_pyramid = []
-
-    for _ in range(level):
-        gaussian_pyramid.append(image)
-        downsampled_image = pyrDown(image, kernel)
-
-        upsampled_image = pyrUp(downsampled_image, kernel, image.shape[:2])
-        laplacian_pyramid.append(image - upsampled_image)
-
-        image = downsampled_image
-
-    gaussian_pyramid = np.asarray(gaussian_pyramid, dtype='object')
-    laplacian_pyramid = np.asarray(laplacian_pyramid, dtype='object')
-
-    return gaussian_pyramid, laplacian_pyramid
 
 
 def idealTemporalBandpassFilter(images,
@@ -86,12 +67,9 @@ def idealTemporalBandpassFilter(images,
     high = (np.abs(frequencies - freq_range[1])).argmin()
 
     fft[:low] = 0
-    fft[-high:] = 0
-    fft[high:-high] = 0
+    fft[high:] = 0
 
-    filtered_images = np.fft.ifft(fft, axis=0).real
-
-    return filtered_images
+    return np.fft.ifft(fft, axis=0).real
 
 
 def butterBandpassFilter(images, freq_range, fps, order=4):
@@ -102,13 +80,17 @@ def butterBandpassFilter(images, freq_range, fps, order=4):
     return sosfilt(sos, images, axis=0)
 
 
-def normalizeReconstructedImage(image):
-    normalized_image = (image - image.min()) / (image.max() - image.min())
-    return (255 * normalized_image).astype(np.uint8)
+def reconstructGaussianImage(image, pyramid):
+    reconstructed_image = rgb2yiq(image) + pyramid
+    reconstructed_image = yiq2rgb(reconstructed_image)
+    reconstructed_image[reconstructed_image > 255] = 255
+    reconstructed_image[reconstructed_image < 0] = 0
+
+    return reconstructed_image.astype(np.uint8)
 
 
-def reconstructImage(pyramid, kernel):
-    reconstructed_image = yiq2rgb(pyramid[0]).astype(np.float32)
+def reconstructLaplacianImage(image, pyramid, kernel):
+    reconstructed_image = rgb2yiq(image)
 
     for level in range(1, len(pyramid)):
         tmp = yiq2rgb(pyramid[level])
@@ -116,11 +98,50 @@ def reconstructImage(pyramid, kernel):
             tmp = pyrUp(tmp, kernel, pyramid[level - curr_level - 1].shape[:2])
         reconstructed_image += tmp.astype(np.float32)
 
-    return normalizeReconstructedImage(reconstructed_image)
+    reconstructed_image = yiq2rgb(reconstructed_image)
+    reconstructed_image[reconstructed_image > 255] = 255
+    reconstructed_image[reconstructed_image < 0] = 0
+
+    return reconstructed_image.astype(np.uint8)
+
+
+def getGaussianOutputVideo(original_images, filtered_images):
+    video = []
+
+    for i in tqdm.tqdm(range(filtered_images.shape[0]),
+                       ascii=True,
+                       desc="Video Reconstruction"):
+
+        reconstructed_image = reconstructGaussianImage(
+                                original_images[i],
+                                filtered_images[i]
+                            )
+
+        video.append(reconstructed_image)
+
+    return np.asarray(video)
+
+
+def getLaplacianOutputVideo(original_images, filtered_images, kernel):
+    video = []
+
+    for i in tqdm.tqdm(range(original_images.shape[0]),
+                       ascii=True,
+                       desc="Video Reconstruction"):
+
+        filtered_image_pyramid = list(map(lambda x: x[i], filtered_images))
+        reconstructed_image = reconstructLaplacianImage(
+                                    image=original_images[i],
+                                    pyramid=filtered_image_pyramid,
+                                    kernel=kernel
+                            )
+        video.append(reconstructed_image)
+
+    return video
 
 
 def saveVideo(video, saving_path, fps):
-    (height, width) = video[0].shape[0:2]
+    (height, width) = video[0].shape[:2]
 
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     writer = cv2.VideoWriter(saving_path, fourcc, fps, (width, height))

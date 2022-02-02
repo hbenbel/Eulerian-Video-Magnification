@@ -1,52 +1,78 @@
 import argparse
 
-import tqdm
-
 from constants import gaussian_kernel
-from processing import loadVideo, reconstructImage, saveVideo
-from pyramids import augmentPyramids, getPyramids
+from gaussian_pyramid import filterGaussianPyramids, getGaussianPyramids
+from laplacian_pyramid import filterLaplacianPyramids, getLaplacianPyramids
+from processing import (getGaussianOutputVideo, getLaplacianOutputVideo,
+                        loadVideo, saveVideo)
 
 
-def getOutputVideo(filtered_images, kernel):
-    video = []
+def gaussian_evm(video_path,
+                 kernel,
+                 level,
+                 alpha,
+                 freq_range,
+                 saving_path,
+                 attenuation):
 
-    for i in tqdm.tqdm(
-                range(filtered_images[0].shape[0]),
-                ascii=True,
-                desc="Video Reconstruction"):
+    images, fps = loadVideo(video_path=video_path)
+    gaussian_pyramids = getGaussianPyramids(
+                            images=images,
+                            kernel=kernel,
+                            level=level
+                    )
 
-        image_all_level = list(map(lambda x: x[i], filtered_images))
-        reconstructed_image = reconstructImage(image_all_level, kernel)
+    print("Gaussian Pyramids Filtering...")
+    filtered_pyramids = filterGaussianPyramids(
+                            pyramids=gaussian_pyramids,
+                            fps=fps,
+                            freq_range=freq_range,
+                            alpha=alpha,
+                            attenuation=attenuation
+                        )
+    print("Finished!")
 
-        video.append(reconstructed_image)
+    output_video = getGaussianOutputVideo(
+                        original_images=images,
+                        filtered_images=filtered_pyramids
+                )
 
-    return video
+    saveVideo(video=output_video, saving_path=saving_path, fps=fps)
 
 
-def main(video_path,
-         kernel,
-         level,
-         freq_range,
-         amplification,
-         saving_path,
-         mode):
+def laplacian_evm(video_path,
+                  kernel,
+                  level,
+                  alpha,
+                  lambda_cutoff,
+                  freq_range,
+                  saving_path,
+                  attenuation):
 
     images, fps = loadVideo(video_path)
-    gaussian_pyramids, laplacian_pyramids = getPyramids(images, kernel, level)
+    laplacian_pyramids = getLaplacianPyramids(
+                                images=images,
+                                kernel=kernel,
+                                level=level
+                    )
 
-    filtered_pyramids_level = augmentPyramids(
-                                gaussian_pyramids=gaussian_pyramids,
-                                laplacian_pyramids=laplacian_pyramids,
-                                level=level,
-                                fps=fps,
-                                freq_range=freq_range,
-                                amplification=amplification,
-                                mode=mode
-                            )
+    print("Laplacian Pyramids Filtering...")
+    filtered_pyramids = filterLaplacianPyramids(
+                            pyramids=laplacian_pyramids,
+                            fps=fps,
+                            freq_range=freq_range,
+                            alpha=alpha,
+                            attenuation=attenuation,
+                            lambda_cutoff=lambda_cutoff
+                    )
+    print("Finished!")
 
-    output_video = getOutputVideo(filtered_pyramids_level, kernel)
+    output_video = getLaplacianOutputVideo(
+                            original_images=images,
+                            filtered_images=filtered_pyramids
+                )
 
-    saveVideo(output_video, saving_path, fps)
+    saveVideo(video=output_video, saving_path=saving_path, fps=fps)
 
 
 if __name__ == "__main__":
@@ -68,21 +94,30 @@ if __name__ == "__main__":
         type=int,
         help="Number of level of the Gaussian/Laplacian Pyramid",
         required=False,
-        default=3
+        default=4
     )
 
     parser.add_argument(
-        "--amplification",
+        "--alpha",
         "-a",
         type=int,
         help="Amplification factor",
         required=False,
-        default=30
+        default=100
     )
 
     parser.add_argument(
-        "--min_frequency",
-        "-minf",
+        "--lambda_cutoff",
+        "-lc",
+        type=int,
+        help="λ cutoff for Laplacian EVM",
+        required=False,
+        default=1000
+    )
+
+    parser.add_argument(
+        "--low_omega",
+        "-lo",
         type=float,
         help="Minimum allowed frequency",
         required=False,
@@ -90,8 +125,8 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--max_frequency",
-        "-maxf",
+        "--high_omega",
+        "-ho",
         type=float,
         help="Maximum allowed frequency",
         required=False,
@@ -116,20 +151,28 @@ if __name__ == "__main__":
         default='gaussian'
     )
 
+    parser.add_argument(
+        "--attenuation",
+        "-at",
+        type=float,
+        help="Attenuation factor for I and Q channel post filtering",
+        required=False,
+        default=1
+    )
+
     args = parser.parse_args()
-    video_path = args.video_path
-    level = args.level
-    amplification = args.amplification
-    frequency_range = [args.min_frequency, args.max_frequency]
-    saving_path = args.saving_path
+    kwargs = {}
+    kwargs['video_path'] = args.video_path
+    kwargs['kernel'] = gaussian_kernel
+    kwargs['level'] = args.level
+    kwargs['alpha'] = args.alpha
+    kwargs['frequency_range'] = [args.low_omega, args.high_omega]
+    kwargs['saving_path'] = args.saving_path
+    kwargs['attenuation'] = args.attenuation
     mode = args.mode
 
-    main(
-        video_path=video_path,
-        kernel=gaussian_kernel,
-        level=level,
-        freq_range=frequency_range,
-        amplification=amplification,
-        saving_path=saving_path,
-        mode=mode
-    )
+    if mode == 'gaussian':
+        gaussian_evm(**kwargs)
+    elif mode == 'laplacian':
+        kwargs['lambda_cutoff'] = args.lambda_cutoff
+        laplacian_evm(**kwargs)
