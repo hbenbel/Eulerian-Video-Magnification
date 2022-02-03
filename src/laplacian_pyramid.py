@@ -53,7 +53,7 @@ def filterLaplacianPyramids(pyramids,
 
         images = np.stack(pyramids[:, lvl]).astype(np.float32)
 
-        (height, width, _) = images[0].shape
+        (_, height, width, _) = images.shape
         lambd = (((height ** 2) + (width ** 2)) ** 0.5) / 3
         new_alpha = (lambd / (8 * delta)) - 1
 

@@ -72,10 +72,9 @@ def idealTemporalBandpassFilter(images,
     return np.fft.ifft(fft, axis=0).real
 
 
-def butterBandpassFilter(images, freq_range, fps, order=4):
-    omega = 0.5 * fps
-    lowpass = freq_range[0] / omega
-    highpass = freq_range[1] / omega
+def butterBandpassFilter(images, freq_range, fps, order=1):
+    lowpass = freq_range[0] / fps
+    highpass = freq_range[1] / fps
     sos = butter(order, [lowpass, highpass], btype='band', output='sos')
     return sosfilt(sos, images, axis=0)
 
@@ -91,7 +90,7 @@ def reconstructGaussianImage(image, pyramid):
 def reconstructLaplacianImage(image, pyramid, kernel):
     reconstructed_image = rgb2yiq(image)
 
-    for level in range(1, len(pyramid)):
+    for level in range(len(pyramid)):
         tmp = pyramid[level]
         for curr_level in range(level):
             tmp = pyrUp(tmp, kernel, pyramid[level - curr_level - 1].shape[:2])

@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from constants import gaussian_kernel
 from gaussian_pyramid import filterGaussianPyramids, getGaussianPyramids
@@ -168,6 +169,9 @@ if __name__ == "__main__":
     kwargs['freq_range'] = [args.low_omega, args.high_omega]
     kwargs['attenuation'] = args.attenuation
     mode = args.mode
+    video_path = args.video_path
+
+    assert os.path.exists(video_path), f"Video {video_path} not found :("
 
     images, fps = loadVideo(video_path=args.video_path)
     kwargs['images'] = images
