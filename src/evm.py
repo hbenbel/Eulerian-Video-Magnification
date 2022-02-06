@@ -55,7 +55,6 @@ def laplacian_evm(images,
                                 level=level
                     )
 
-    print("Laplacian Pyramids Filtering...")
     filtered_pyramids = filterLaplacianPyramids(
                             pyramids=laplacian_pyramids,
                             fps=fps,
@@ -65,7 +64,6 @@ def laplacian_evm(images,
                             lambda_cutoff=lambda_cutoff,
                             level=level
                     )
-    print("Finished!")
 
     output_video = getLaplacianOutputVideo(
                             original_images=images,
@@ -78,7 +76,7 @@ def laplacian_evm(images,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Eulerian Video Magnification for heartbeats detection"
+        description="Eulerian Video Magnification for colors and motions magnification"
     )
 
     parser.add_argument(

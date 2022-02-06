@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import tqdm
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, sosfilt, lfilter
 
 from constants import rgb_from_yiq, yiq_from_rgb
 
@@ -72,10 +72,8 @@ def idealTemporalBandpassFilter(images,
     return np.fft.ifft(fft, axis=0).real
 
 
-def butterBandpassFilter(images, freq_range, fps, order=1):
-    lowpass = freq_range[0] / fps
-    highpass = freq_range[1] / fps
-    sos = butter(order, [lowpass, highpass], btype='band', output='sos')
+def butterBandpassFilter(images, freq_range, fps):
+    sos = butter(1, freq_range, btype='band', output='sos', fs=fps)
     return sosfilt(sos, images, axis=0)
 
 
@@ -90,7 +88,7 @@ def reconstructGaussianImage(image, pyramid):
 def reconstructLaplacianImage(image, pyramid, kernel):
     reconstructed_image = rgb2yiq(image)
 
-    for level in range(len(pyramid)):
+    for level in range(1, len(pyramid) - 1):
         tmp = pyramid[level]
         for curr_level in range(level):
             tmp = pyrUp(tmp, kernel, pyramid[level - curr_level - 1].shape[:2])
