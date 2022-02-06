@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import tqdm
-from scipy.signal import butter, sosfilt, lfilter
+from scipy.signal import butter, sosfilt
 
 from constants import rgb_from_yiq, yiq_from_rgb
 
