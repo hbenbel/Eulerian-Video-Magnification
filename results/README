@@ -1,0 +1,36 @@
+Configurations to obtain the same results
+
+Colors
+    - face
+        - level: 4
+        - alpha: 50
+        - attenuation: 1
+        - mode: gaussian
+        - low omega: 0.8333
+        - high omega: 1
+    - face2
+        - level: 6
+        - alpha: 50
+        - attenuation: 1
+        - mode: gaussian
+        - low omega: 0.8333
+        - high omega: 1
+
+Motions
+    - wrist
+        - level: 6
+        - alpha: 30
+        - lambda cutoff: 16
+        - attenuation: 0.1
+        - mode: laplacian
+        - low omega: 0.4
+        - high omega: 3
+
+    - baby
+        - level: 4
+        - alpha: 15
+        - lambda cutoff: 16
+        - attenuation: 0.1
+        - mode: laplacian
+        - low omega: 0.4
+        - high omega: 3
