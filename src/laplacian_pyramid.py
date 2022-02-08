@@ -49,12 +49,12 @@ def filterLaplacianPyramids(pyramids,
 
     for lvl in tqdm.tqdm(range(level),
                          ascii=True,
-                         desc="Laplacian Pyramids Augmentation"):
+                         desc="Laplacian Pyramids Filtering"):
 
         images = np.stack(pyramids[:, lvl]).astype(np.float32)
 
         (_, height, width, _) = images.shape
-        lambd = (((height ** 2) + (width ** 2)) ** 0.5) / 3
+        lambd = ((height ** 2) + (width ** 2)) ** 0.5
         new_alpha = (lambd / (8 * delta)) - 1
 
         filtered_images = butterBandpassFilter(

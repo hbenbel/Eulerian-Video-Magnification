@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     assert os.path.exists(video_path), f"Video {video_path} not found :("
 
-    images, fps = loadVideo(video_path=args.video_path)
+    images, fps = loadVideo(video_path=video_path)
     kwargs['images'] = images
     kwargs['fps'] = fps
 
