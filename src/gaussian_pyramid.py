@@ -24,20 +24,19 @@ def generateGaussianPyramid(image, kernel, level):
 
 
 def getGaussianPyramids(images, kernel, level):
-    gaussian_pyramids = []
+    gaussian_pyramids = np.zeros_like(images, dtype=np.float32)
 
-    for image in tqdm.tqdm(images,
-                           ascii=True,
-                           desc='Gaussian Pyramids Generation'):
+    for i in tqdm.tqdm(range(images.shape[0]),
+                       ascii=True,
+                       desc='Gaussian Pyramids Generation'):
 
-        gaussian_pyramid = generateGaussianPyramid(
-                                    image=rgb2yiq(image),
+        gaussian_pyramids[i] = generateGaussianPyramid(
+                                    image=rgb2yiq(images[i]),
                                     kernel=kernel,
                                     level=level
                         )
-        gaussian_pyramids.append(gaussian_pyramid)
 
-    return np.asarray(gaussian_pyramids)
+    return gaussian_pyramids
 
 
 def filterGaussianPyramids(pyramids,
