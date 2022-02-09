@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import tqdm
-from scipy.signal import butter, sosfilt
 
 from constants import rgb_from_yiq, yiq_from_rgb
 
@@ -72,11 +71,6 @@ def idealTemporalBandpassFilter(images,
     return np.fft.ifft(fft, axis=0).real
 
 
-def butterBandpassFilter(images, freq_range, fps):
-    sos = butter(1, freq_range, btype='band', output='sos', fs=fps)
-    return sosfilt(sos, images, axis=0)
-
-
 def reconstructGaussianImage(image, pyramid):
     reconstructed_image = rgb2yiq(image) + pyramid
     reconstructed_image = yiq2rgb(reconstructed_image)
@@ -88,7 +82,7 @@ def reconstructGaussianImage(image, pyramid):
 def reconstructLaplacianImage(image, pyramid, kernel):
     reconstructed_image = rgb2yiq(image)
 
-    for level in range(1, len(pyramid) - 1):
+    for level in range(1, pyramid.shape[0] - 1):
         tmp = pyramid[level]
         for curr_level in range(level):
             tmp = pyrUp(tmp, kernel, pyramid[level - curr_level - 1].shape[:2])
@@ -108,8 +102,8 @@ def getGaussianOutputVideo(original_images, filtered_images):
                        desc="Video Reconstruction"):
 
         reconstructed_image = reconstructGaussianImage(
-                                original_images[i],
-                                filtered_images[i]
+                                image=original_images[i],
+                                pyramid=filtered_images[i]
                             )
         video.append(reconstructed_image)
 
@@ -123,10 +117,9 @@ def getLaplacianOutputVideo(original_images, filtered_images, kernel):
                        ascii=True,
                        desc="Video Reconstruction"):
 
-        filtered_image_pyramid = list(map(lambda x: x[i], filtered_images))
         reconstructed_image = reconstructLaplacianImage(
                                     image=original_images[i],
-                                    pyramid=filtered_image_pyramid,
+                                    pyramid=filtered_images[i],
                                     kernel=kernel
                             )
         video.append(reconstructed_image)

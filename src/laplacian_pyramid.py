@@ -1,7 +1,8 @@
 import numpy as np
 import tqdm
+from scipy.signal import butter
 
-from processing import butterBandpassFilter, pyrDown, pyrUp, rgb2yiq
+from processing import pyrDown, pyrUp, rgb2yiq
 
 
 def generateLaplacianPyramid(image, kernel, level):
@@ -44,28 +45,34 @@ def filterLaplacianPyramids(pyramids,
                             lambda_cutoff,
                             attenuation):
 
-    filtered_pyramids = []
+    filtered_pyramids = np.zeros_like(pyramids)
     delta = lambda_cutoff / (8 * (1 + alpha))
+    b_low, a_low = butter(1, freq_range[0], btype='low', output='ba', fs=fps)
+    b_high, a_high = butter(1, freq_range[1], btype='low', output='ba', fs=fps)
 
-    for lvl in tqdm.tqdm(range(level),
-                         ascii=True,
-                         desc="Laplacian Pyramids Filtering"):
+    lowpass = pyramids[0]
+    highpass = pyramids[0]
+    filtered_pyramids[0] = pyramids[0]
 
-        images = np.stack(pyramids[:, lvl]).astype(np.float32)
+    for i in tqdm.tqdm(range(1, pyramids.shape[0]),
+                       ascii=True,
+                       desc="Laplacian Pyramids Filtering"):
 
-        (_, height, width, _) = images.shape
-        lambd = ((height ** 2) + (width ** 2)) ** 0.5
-        new_alpha = (lambd / (8 * delta)) - 1
+        lowpass = (-a_low[1] * lowpass
+                   + b_low[0] * pyramids[i]
+                   + b_low[1] * pyramids[i - 1]) / a_low[0]
+        highpass = (-a_high[1] * highpass
+                    + b_high[0] * pyramids[i]
+                    + b_high[1] * pyramids[i - 1]) / a_high[0]
 
-        filtered_images = butterBandpassFilter(
-                            images=images,
-                            fps=fps,
-                            freq_range=freq_range
-                        ).astype(np.float32)
+        filtered_pyramids[i] = highpass - lowpass
 
-        filtered_images *= min(alpha, new_alpha)
-        filtered_images[:, :, :, 1:] *= attenuation
+        for lvl in range(1, level - 1):
+            (height, width, _) = filtered_pyramids[i, lvl].shape
+            lambd = ((height ** 2) + (width ** 2)) ** 0.5
+            new_alpha = (lambd / (8 * delta)) - 1
 
-        filtered_pyramids.append(filtered_images)
+            filtered_pyramids[i, lvl] *= min(alpha, new_alpha)
+            filtered_pyramids[i, lvl][:, :, 1:] *= attenuation
 
     return filtered_pyramids
