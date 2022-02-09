@@ -95,36 +95,34 @@ def reconstructLaplacianImage(image, pyramid, kernel):
 
 
 def getGaussianOutputVideo(original_images, filtered_images):
-    video = []
+    video = np.zeros_like(original_images)
 
     for i in tqdm.tqdm(range(filtered_images.shape[0]),
                        ascii=True,
                        desc="Video Reconstruction"):
 
-        reconstructed_image = reconstructGaussianImage(
-                                image=original_images[i],
-                                pyramid=filtered_images[i]
-                            )
-        video.append(reconstructed_image)
+        video[i] = reconstructGaussianImage(
+                    image=original_images[i],
+                    pyramid=filtered_images[i]
+                )
 
-    return np.asarray(video)
+    return video
 
 
 def getLaplacianOutputVideo(original_images, filtered_images, kernel):
-    video = []
+    video = np.zeros_like(original_images)
 
     for i in tqdm.tqdm(range(original_images.shape[0]),
                        ascii=True,
                        desc="Video Reconstruction"):
 
-        reconstructed_image = reconstructLaplacianImage(
-                                    image=original_images[i],
-                                    pyramid=filtered_images[i],
-                                    kernel=kernel
-                            )
-        video.append(reconstructed_image)
+        video[i] = reconstructLaplacianImage(
+                    image=original_images[i],
+                    pyramid=filtered_images[i],
+                    kernel=kernel
+                )
 
-    return np.asarray(video)
+    return video
 
 
 def saveVideo(video, saving_path, fps):
