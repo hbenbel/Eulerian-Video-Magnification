@@ -29,7 +29,7 @@ USAGE
       --high_omega HIGH_OMEGA, -ho HIGH_OMEGA
                             Maximum allowed frequency
       --saving_path SAVING_PATH, -s SAVING_PATH
-                            Saving path of the magnified video
+                            Saving path of the magnified video (.avi extension necessary)
       --mode {gaussian,laplacian}, -m {gaussian,laplacian}
                             Type of pyramids to use (gaussian or laplacian)
       --attenuation ATTENUATION, -at ATTENUATION
